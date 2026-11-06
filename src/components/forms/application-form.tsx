@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Check, Copy, Loader2 } from "lucide-react";
-import { submitApplication } from "@/app/actions";
+import { ArrowLeft, ArrowRight, Check, Clock, Copy, Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ChoiceCard, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { applicationForm, type ExtraQuestion } from "@/content/application-form";
+import { deliver, formsConnected } from "@/lib/delivery";
+import { prefillFromSearch } from "@/lib/prefill";
 import { useBrowserLocale, useIsClient } from "@/lib/use-browser";
 import { cn } from "@/lib/utils";
 import {
@@ -70,8 +72,10 @@ function normalize(next: ApplicationValues, classes: FormClass[]): ApplicationVa
   return out;
 }
 
-export function ApplicationForm({ initial, options }: { initial: Partial<ApplicationValues>; options: FormOptions }) {
-  const [state, setValues] = useState<ApplicationValues>(() => ({ ...emptyApplication(), ...initial }));
+/** Must be rendered inside <Suspense>: it reads the URL to pre-select the program, format and class. */
+export function ApplicationForm({ options }: { options: FormOptions }) {
+  const searchParams = useSearchParams();
+  const [state, setValues] = useState<ApplicationValues>(() => ({ ...emptyApplication(), ...prefillFromSearch(searchParams) }));
   const browser = useBrowserLocale();
   // Submitting is only possible once hydrated, so the browser never falls back to a native submission.
   const hydrated = useIsClient();
@@ -167,7 +171,7 @@ export function ApplicationForm({ initial, options }: { initial: Partial<Applica
     setFormError(null);
     startTransition(async () => {
       try {
-        const response = await submitApplication({ values, honeypot, elapsedMs: Date.now() - startedAt.current, turnstileToken });
+        const response = await deliver("application", { values, honeypot, elapsedMs: Date.now() - startedAt.current, turnstileToken });
         if (response.ok) {
           setResult({ reference: response.reference, emailSent: response.emailSent });
           requestAnimationFrame(() => topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -239,6 +243,13 @@ export function ApplicationForm({ initial, options }: { initial: Partial<Applica
           </h2>
           <p className="text-stone">{current.description}</p>
         </div>
+
+        {!formsConnected && step === 0 ? (
+          <div className="flex items-start gap-3 rounded-2xl bg-accent-soft px-4 py-3.5 text-[0.9375rem] leading-relaxed text-accent-deep" role="status">
+            <Clock className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+            <p>Online applications open soon. Feel free to explore the form — submissions will be enabled shortly.</p>
+          </div>
+        ) : null}
 
         {current.id === "interest" ? (
           <div className="flex flex-col gap-8">
@@ -585,14 +596,14 @@ export function ApplicationForm({ initial, options }: { initial: Partial<Applica
           ) : (
             <span className="text-[0.875rem] text-stone">About 5 minutes · no account needed</span>
           )}
-          <Button type="submit" size="lg" disabled={pending || !hydrated}>
+          <Button type="submit" size="lg" disabled={pending || !hydrated || (isLast && !formsConnected)}>
             {pending ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden />
                 Sending…
               </>
             ) : isLast ? (
-              "Submit application"
+              formsConnected ? "Submit application" : "Submissions open soon"
             ) : (
               <>
                 Continue

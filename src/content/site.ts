@@ -9,7 +9,9 @@ export const site = {
   tagline: "Private, instructor-led learning",
   description:
     "Instructor-led private lessons and small group classes, taught live by the instructor — with a private Slack community and carefully prepared PowerPoint sessions.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  /** Social preview image in /public (1200 × 630). */
+  ogImage: { url: "/og-image.png", width: 1200, height: 630, alt: "Scavelo Learning Studio — Learn directly from the instructor." },
   locale: "en-GB",
   currency: "EUR",
   timezone: "Europe/Tirane",

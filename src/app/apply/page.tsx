@@ -8,17 +8,14 @@ import { CLASS_STATUS_LABELS } from "@/content/classes";
 import { privatePackages } from "@/content/copy";
 import { programs } from "@/content/programs";
 import { site } from "@/content/site";
-import { classStatus, getProgram, isBookable, upcomingClasses } from "@/lib/catalog";
+import { classStatus, isBookable, upcomingClasses } from "@/lib/catalog";
 import { formatDate } from "@/lib/format";
-import { CONTACT_METHODS, FORMATS, INTENTS, type ApplicationValues } from "@/lib/validation";
 
 export const metadata: Metadata = {
   title: "Apply",
   description: "Apply for private lessons or a group class. No account or payment needed — the instructor will contact you personally.",
   alternates: { canonical: "/apply" },
 };
-
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const reassurance = [
   { icon: Clock, title: "About five minutes", body: "Four short steps. You can go back at any time." },
@@ -55,7 +52,7 @@ function buildOptions(): FormOptions {
   };
 }
 
-export default function ApplyPage({ searchParams }: { searchParams: SearchParams }) {
+export default function ApplyPage() {
   return (
     <section className="bg-sand pt-14 pb-24 sm:pt-20 sm:pb-32">
       <div className="container-page grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
@@ -82,42 +79,11 @@ export default function ApplyPage({ searchParams }: { searchParams: SearchParams
           </ul>
         </div>
         <Suspense fallback={<FormSkeleton />}>
-          <PrefilledForm searchParams={searchParams} />
+          <ApplicationForm options={buildOptions()} />
         </Suspense>
       </div>
     </section>
   );
-}
-
-/** Reads ?program=…&format=…&intent=…&class=…&package=… to pre-select choices. Unknown values are ignored. */
-async function PrefilledForm({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams;
-  const get = (key: string) => (typeof params[key] === "string" ? (params[key] as string) : "");
-  const initial: Partial<ApplicationValues> = {};
-
-  const program = getProgram(get("program"));
-  if (program) initial.program = program.slug;
-  const format = get("format").toUpperCase();
-  if (format in FORMATS) initial.format = format;
-  const intent = get("intent").toUpperCase();
-  if (intent in INTENTS) initial.intent = intent;
-  else if (program && !program.acceptingApplications) initial.intent = "INTEREST";
-  const classId = get("class");
-  const groupClass = upcomingClasses().find((c) => c.id === classId && (!program || c.programSlug === program.slug));
-  if (groupClass) {
-    initial.classId = groupClass.id;
-    initial.program ??= groupClass.programSlug;
-    initial.format ??= "GROUP";
-  }
-  const pack = privatePackages.find((p) => p.id === get("package"));
-  if (pack) {
-    initial.package = pack.id;
-    initial.format ??= "PRIVATE";
-  }
-  const contact = get("contact").toUpperCase();
-  if (contact in CONTACT_METHODS) initial.preferredContact = contact;
-
-  return <ApplicationForm initial={initial} options={buildOptions()} />;
 }
 
 function FormSkeleton() {

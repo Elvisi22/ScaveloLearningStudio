@@ -1,14 +1,10 @@
-import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { footerNav, site } from "@/content/site";
 import { TextLink } from "@/components/ui/button";
 import { Logo } from "./logo";
 
-async function CurrentYear() {
-  "use cache";
-  cacheLife("days");
-  return <>{new Date().getFullYear()}</>;
-}
+/** Evaluated when the site is built. */
+const CURRENT_YEAR = new Date().getFullYear();
 
 export function Footer() {
   const socials = site.socials.filter((social) => social.href);
@@ -71,7 +67,7 @@ export function Footer() {
 
         <div className="flex flex-col gap-3 border-t border-ink/[0.08] py-6 text-[0.75rem] sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Copyright © <CurrentYear /> {site.legalName}. All lessons are taught live by the instructor.
+            Copyright © {CURRENT_YEAR} {site.legalName}. All lessons are taught live by the instructor.
           </p>
           {socials.length ? (
             <ul className="flex gap-5">

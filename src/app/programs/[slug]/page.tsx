@@ -22,6 +22,9 @@ import { cn } from "@/lib/utils";
 
 type Props = { params: Promise<{ slug: string }> };
 
+// Only the programs listed in src/content/programs.ts exist; anything else is a 404.
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return programs.map((program) => ({ slug: program.slug }));
 }
@@ -34,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: program.title,
     description: program.shortDescription,
     alternates: { canonical: `/programs/${program.slug}` },
-    openGraph: { title: `${program.title} — ${site.name}`, description: program.shortDescription, url: `/programs/${program.slug}` },
+    openGraph: { title: `${program.title} — ${site.name}`, description: program.shortDescription, url: `/programs/${program.slug}/`, images: [site.ogImage] },
   };
 }
 

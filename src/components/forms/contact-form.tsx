@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Loader2 } from "lucide-react";
-import { submitContact } from "@/app/actions";
+import { Check, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { CONTACT_TOPICS, contactSchema, issuesToErrors, type ContactValues } from "@/lib/validation";
+import { deliver, formsConnected } from "@/lib/delivery";
 import { useIsClient } from "@/lib/use-browser";
 import { Honeypot, Turnstile } from "./turnstile";
 
@@ -46,7 +46,7 @@ export function ContactForm({ turnstileSiteKey, responseTime }: { turnstileSiteK
     setFormError(null);
     startTransition(async () => {
       try {
-        const response = await submitContact({ values, honeypot, elapsedMs: Date.now() - startedAt.current, turnstileToken: token });
+        const response = await deliver("contact", { values, honeypot, elapsedMs: Date.now() - startedAt.current, turnstileToken: token });
         if (response.ok) setReference(response.reference);
         else {
           setFormError(response.message);
@@ -77,6 +77,12 @@ export function ContactForm({ turnstileSiteKey, responseTime }: { turnstileSiteK
   return (
     <form noValidate method="post" onSubmit={submit} className="relative flex flex-col gap-7 rounded-[2rem] bg-paper p-6 shadow-card sm:rounded-[2.25rem] sm:p-10">
       <Honeypot value={honeypot} onChange={setHoneypot} />
+      {!formsConnected ? (
+        <div className="flex items-start gap-3 rounded-2xl bg-accent-soft px-4 py-3.5 text-[0.9375rem] leading-relaxed text-accent-deep" role="status">
+          <Clock className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          <p>The contact form opens soon. Thank you for your patience.</p>
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Field id="contact-name" label="Name" required error={errors.name}>
           <Input id="contact-name" autoComplete="name" value={values.name} onChange={(e) => set("name", e.target.value)} {...aria("name")} />
@@ -120,14 +126,14 @@ export function ContactForm({ turnstileSiteKey, responseTime }: { turnstileSiteK
           {formError}
         </p>
       ) : null}
-      <Button type="submit" size="lg" disabled={pending || !hydrated} className="self-start">
+      <Button type="submit" size="lg" disabled={pending || !hydrated || !formsConnected} className="self-start">
         {pending ? (
           <>
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Sending…
           </>
         ) : (
-          "Send message"
+          formsConnected ? "Send message" : "Opens soon"
         )}
       </Button>
     </form>
